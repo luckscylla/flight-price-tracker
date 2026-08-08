@@ -1,0 +1,18 @@
+search:
+  origin: TPE          # 出發機場 IATA 代碼
+  destination: NRT     # 抵達機場 IATA 代碼
+  departure_date: "2026-10-01"   # 出發日期 YYYY-MM-DD
+  return_date: null    # 回程日期；null 表示單程，填入日期即為來回
+  adults: 1            # 成人人數
+  currency: TWD        # 幣別
+  max_results: 5       # 取前幾筆結果計算最低價
+  target_price: 15000  # 目標價（NT$），低於此價即發通知
+
+notification:
+  provider: telegram   # 目前僅支援 telegram
+  telegram:
+    bot_token_env: TELEGRAM_BOT_TOKEN   # Bot token 的環境變數名稱
+    chat_id_env: TELEGRAM_CHAT_ID       # 接收者的 chat id 環境變數名稱
+
+logging:
+  history_file: data/history.csv   # 查詢歷史記錄

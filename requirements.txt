@@ -1,0 +1,4 @@
+google-flights-search>=0.1.21
+PyYAML>=6.0
+python-dotenv>=1.0
+requests>=2.31

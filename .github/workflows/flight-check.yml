@@ -1,0 +1,29 @@
+name: Flight Price Check
+
+on:
+  schedule:
+    # UTC 01:00 / 13:00 = 台灣時間 09:00 / 21:00（每日兩次）
+    - cron: "0 1,13 * * *"
+  workflow_dispatch: # 可在 GitHub 網頁上手動觸發
+
+jobs:
+  check-price:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run flight price check
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py
