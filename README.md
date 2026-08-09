@@ -79,6 +79,8 @@ flight-price-tracker/
 
 ## 一次性的帳號設定
 
+> 完整逐步操作請見 [CHECKLIST.md](CHECKLIST.md)（從零到上線的打勾清單）。
+
 ### 1. LINE 官方帳號（Messaging API）
 
 1. 前往 [LINE Developers Console](https://developers.line.biz/console/) 登入。
