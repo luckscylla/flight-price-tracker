@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用 opencode 開發 flight-price-tracker</title>
+<style>
+  :root {
+    --bg: #f7f8fa; --fg: #1f2328; --accent: #0969da; --muted: #656d76;
+    --border: #d0d7de; --code-bg: #eff1f3;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+    overflow: hidden;
+  }
+  .deck { width: 100%; height: 100%; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: none; padding: 7vh 9vw;
+    overflow-y: auto; flex-direction: column; justify-content: center;
+  }
+  .slide.active { display: flex; }
+  .slide-inner { width: 100%; max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 2.6em; color: var(--accent); margin: 0 0 .3em; }
+  h2 { font-size: 1.9em; margin: 0 0 .6em; border-bottom: 3px solid var(--accent);
+       padding-bottom: .25em; }
+  h3 { font-size: 1.35em; margin: 1em 0 .4em; }
+  p, li { font-size: 1.15em; line-height: 1.65; }
+  ul { padding-left: 1.3em; }
+  li { margin: .45em 0; }
+  table { border-collapse: collapse; margin: 1em 0; width: 100%; font-size: 1.05em; }
+  th, td { border: 1px solid var(--border); padding: .55em .8em; text-align: left; }
+  th { background: var(--code-bg); }
+  code { background: var(--code-bg); padding: .12em .35em; border-radius: 4px;
+         font-family: "Cascadia Code", Consolas, monospace; font-size: .95em; }
+  pre { background: var(--code-bg); padding: 1em 1.2em; border-radius: 8px;
+        overflow-x: auto; font-size: .95em; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid var(--accent); margin: 1em 0;
+               padding: .3em 1em; background: #eef4fd; border-radius: 0 8px 8px 0; }
+  blockquote p { font-size: 1.25em; font-weight: 600; }
+  .nav {
+    position: fixed; bottom: 1.5vh; right: 2vw;
+    color: var(--muted); font-size: .95em; z-index: 10;
+  }
+  .page { margin-right: .8em; }
+  .hint { position: fixed; bottom: 1.5vh; left: 2vw; color: var(--muted);
+          font-size: .85em; z-index: 10; }
+  .controls button {
+    border: 1px solid var(--border); background: #fff; color: var(--fg);
+    border-radius: 6px; padding: .25em .7em; font-size: 1em; cursor: pointer;
+  }
+  @media print {
+    body { overflow: visible; }
+    .slide { position: relative; display: flex !important; page-break-after: always;
+             min-height: 100vh; }
+    .nav, .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+<section class="slide active"><div class="slide-inner"><h1>用 opencode 開發 flight-price-tracker</h1>
+<h3>從一句需求到一個會自己查機票、自動通知的系統</h3>
+<p>一個「AI 對談式開發」的完整實作紀錄 — 包含踩過的坑與解法</p></div></section>
+<section class="slide"><div class="slide-inner"><h1>這個專案在做什麼</h1>
+<blockquote>
+<p>「我想開發一個<strong>定時查詢機票價格並發送通知</strong>的自動化腳本。」</p>
+</blockquote>
+<p>用一句話，開場就是需求 — 接下來全部靠<strong>與 opencode 對話</strong>完成：</p>
+<ul>
+<li>🔍 <strong>查價</strong>：Google Flights，支援 TWD</li>
+<li>🔔 <strong>通知</strong>：低於目標價就推 LINE</li>
+<li>⏰ <strong>排程</strong>：每天自動跑兩次</li>
+<li>💬 <strong>設定</strong>：在 LINE 上直接改航線／日期／目標價</li>
+</ul></div></section>
+<section class="slide"><div class="slide-inner"><h1>需求 → 技術選型</h1>
+<table>
+<thead>
+<tr>
+<th>需求</th>
+<th>選定方案</th>
+<th>為什麼</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>程式語言</td>
+<td>Python 3.10+</td>
+<td>爬蟲／API 生態系成熟</td>
+</tr>
+<tr>
+<td>查價來源</td>
+<td><code>google-flights-search</code> 爬蟲</td>
+<td>免 API key、支援 TWD、涵蓋台灣機場</td>
+</tr>
+<tr>
+<td>通知</td>
+<td>LINE Messaging API</td>
+<td>LINE Notify 已終止；最後演進至 LINE</td>
+</tr>
+<tr>
+<td>排程</td>
+<td>GitHub Actions cron</td>
+<td>免伺服器、雲端定時、可手動觸發</td>
+</tr>
+<tr>
+<td>設定介面</td>
+<td>LINE 對話式 <code>/set</code></td>
+<td>免改設定檔、即時生效</td>
+</tr>
+</tbody>
+</table></div></section>
+<section class="slide"><div class="slide-inner"><h1>整個開發過程的「問題與解法」地圖</h1>
+<p>這趟旅程並非一帆風順，總共踩了 <strong>7 個坑</strong>，全部在對話中邊做邊解決：</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>問題</th>
+<th>關鍵解法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>LINE Notify 終止</td>
+<td>改用 Telegram（第一版）</td>
+</tr>
+<tr>
+<td>2</td>
+<td>排程雲端無狀態</td>
+<td>對話設定寫進 Gist，排程讀取</td>
+</tr>
+<tr>
+<td>3</td>
+<td>想讀 Telegram user bio</td>
+<td>不可行（隱私）→ 改為 LINE 置頂訊息思路</td>
+</tr>
+<tr>
+<td>4</td>
+<td>LINE 收訊機制</td>
+<td>只能 webhook → 選 Google Apps Script</td>
+</tr>
+<tr>
+<td>5</td>
+<td>GAS webhook Verify 302</td>
+<td>ContentService redirect 限制，實際投遞正常</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>followers/ids</code> API 不可用</td>
+<td>免費方案限制 → 靠 webhook 註冊 userId</td>
+</tr>
+<tr>
+<td>7</td>
+<td>幣別跑掉（237 vs 7641）</td>
+<td>伺服器 IP 決定幣別 → 強制 <code>curr=TWD</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<section class="slide"><div class="slide-inner"><h1>坑 1：LINE Notify 已終止</h1>
+<p><strong>現象</strong>：原始需求直接指名用「LINE Notify / Telegram Bot / Email」。</p>
+<p><strong>發現</strong>：LINE 官方公告 <strong>LINE Notify 已於 2025/3/31 終止服務</strong>。</p>
+<p><strong>決策</strong>：
+- 第一版改用 <strong>Telegram Bot</strong>（免費、設定簡單）
+- 之後使用者偏好 LINE → 用「<strong>LINE Messaging API（官方帳號）</strong>」——它跟 Notify 是兩回事，仍然活躍</p>
+<blockquote>
+<p>重點：<strong>別把「Notification 服務」和「Messaging API」搞混</strong>，判斷前先查官方文件與最新公告。</p>
+</blockquote></div></section>
+<section class="slide"><div class="slide-inner"><h1>坑 2：GitHub Actions 是無狀態的</h1>
+<p><strong>衝突</strong>：Telegram／LINE Bot 需要「<strong>一直在跑的程式</strong>」才能收訊息；GitHub Actions 跑完即消失，存不住任何設定。</p>
+<p><strong>架構演進（在對話中逐步收斂）</strong>：</p>
+<pre><code>想法A：本機常駐 → 需要一直開機的機器 ✗
+想法B：Bot 把設定寫回 repo → 會污染 repo、多一層 API ✗
+方案C：設定存 GitHub Gist，排程每次下載 → ✓ 乾淨、即時生效
+</code></pre>
+<p><strong>最終架構</strong>：</p>
+<pre><code>LINE 使用者 ──訊息──&gt; GAS 接收器（免費常駐）
+                        │ 對話設定 → 寫入 Gist
+                        ▼
+GitHub Actions ──下載 Gist 設定──&gt; 查價 ──&gt; LINE Push 通知
+</code></pre></div></section>
+<section class="slide"><div class="slide-inner"><h1>坑 3：想讀 Telegram 的 user bio？</h1>
+<p><strong>想法</strong>：能不能在排程執行時，直接讀 Telegram 使用者的「簡介」當作查詢設定？</p>
+<p><strong>結果：做不到。</strong> Telegram Bot API <strong>不提供 user bio</strong>——這是隱私欄位。</p>
+<p><strong>但這帶出了關鍵設計探索</strong>：
+- Telegram 有「置頂訊息 + <code>getChat</code>」的<strong>零架設</strong>讀設定法
+- LINE 沒有長輪詢、只能 webhook → 需要常駐端點</p>
+<blockquote>
+<p>收穫：<strong>「做不到的事」也要被明確驗證</strong>，而不是默默繞過；限制會引導出正確的架構。</p>
+</blockquote></div></section>
+<section class="slide"><div class="slide-inner"><h1>坑 4：LINE 只能 webhook → 選 Google Apps Script</h1>
+<p><strong>LINE 與 Telegram 本質不同</strong>：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Telegram</th>
+<th>LINE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>收訊息</td>
+<td>長輪詢（需常駐程式）</td>
+<td><strong>只能 webhook</strong></td>
+</tr>
+<tr>
+<td>需不需要開機</td>
+<td>是</td>
+<td>不用，但要公開 HTTPS 網址</td>
+</tr>
+</tbody>
+</table>
+<p><strong>選擇 GAS 的原因</strong>：免費、永遠在線、免維護、貼上 <code>code.gs</code> 即可部署。</p>
+<p><strong>成本驗證（對話中查證）</strong>：
+- Reply API（對話回覆）→ <strong>不計費</strong>
+- Push API（降價通知）→ 計入額度，但免費方案 200 則/月，本專案約 60 則/月 → <strong>零成本</strong></p></div></section>
+<section class="slide"><div class="slide-inner"><h1>坑 5：GAS Webhook Verify 一直 302</h1>
+<p><strong>現象</strong>：LINE Verify 回 <code>302 Found</code>，但瀏覽器／Postman 都正常。</p>
+<p><strong>追查</strong>：
+- 先懷疑部署權限 → 無痕模式測試，匿名存取正常
+- 網路查證 → 官方文件：<code>ContentService</code> 的內容<strong>不會直接回傳</strong>，而是先 <strong>302 redirect</strong> 到一次性網址
+- <strong>LINE Verify 不跟隨 redirect → 誤判失敗</strong></p>
+<p><strong>解法</strong>：
+- 加 <code>doGet</code> 讓瀏覽器「暖機」可用
+- 關鍵測試：<strong>直接開啟 Use webhook、傳真實訊息</strong> → 有回應 = 實際投遞正常</p>
+<blockquote>
+<p>教訓：<strong>驗證工具的回報 ≠ 系統真的壞了</strong>；用「最小真實操作」做決定性測試。</p>
+</blockquote></div></section>
+<section class="slide"><div class="slide-inner"><h1>坑 6：<code>followers/ids</code> API 不可用</h1>
+<p><strong>現象</strong>：想用「取得好友列表」抓通知名單 → <code>Access to this API is not available for your account</code>。</p>
+<p><strong>查證</strong>：官方文件 + 社群實測 → 此 API <strong>僅限 verified／付費帳號</strong>，免費方案無權限。</p>
+<p><strong>未來多使用者設計（免費可行）</strong>：</p>
+<pre><code>使用者加好友 / 傳訊息 ──&gt; webhook 事件帶 source.userId ──&gt; Bot 自動存名單
+降價時 ──&gt; 對每個 userId 發 Push（以人數計費，需留意額度）
+</code></pre>
+<blockquote>
+<p>收穫：<strong>先確認平台限制再設計功能</strong>，省得白做工。</p>
+</blockquote></div></section>
+<section class="slide"><div class="slide-inner"><h1>坑 7：幣別跑掉 — TWD 237 vs 實際 7641</h1>
+<p><strong>現象</strong>：通知顯示 <code>TWD 237</code>，點開頁面卻是 <code>7641</code>（237 × 32.24 ≈ 7641 = 美金）。</p>
+<p><strong>根因</strong>：<code>google-flights-search</code> 請求只送 <code>hl=zh-TW</code>、<strong>沒送 <code>curr</code></strong> → Google 依<strong>伺服器 IP 地區</strong>決定幣別；GitHub Actions 在美國 → 回美金，套件卻無條件標成 TWD。</p>
+<p><strong>修法</strong>（<code>tracker/search.py</code>）：</p>
+<pre><code class="language-python"># 呼叫前，把套件請求網址注入 curr 參數
+if &quot;curr=&quot; not in _gf_fetcher._GF_SEARCH_URL:
+    _gf_fetcher._GF_SEARCH_URL += &quot;?&quot; + &quot;curr=TWD&quot;
+</code></pre>
+<blockquote>
+<p>教訓：<strong>「本機正常、雲端異常」八成是環境差異</strong>（IP、時區、locale）；用 log 對照再推導。</p>
+</blockquote></div></section>
+<section class="slide"><div class="slide-inner"><h1>最終架構圖</h1>
+<pre><code>┌────────────┐  訊息    ┌──────────────┐  /set 對話設定   ┌──────────┐
+│ LINE 使用者 │ ───────► │ LINE Messaging│ ─────────────► │  GAS     │
+└────────────┘           │ API          │                 │ 接收器   │
+        ▲                └──────────────┘                 └────┬─────┘
+        │  Push 通知                                             │ 寫入
+        │  （免費額度內）                                        ▼
+        │                                               ┌──────────┐
+        └───────────────────────────────────────────────│   Gist   │
+                                          查價結果        └────┬─────┘
+┌──────────────┐  每日 09:00/21:00   ┌──────────┐ 下載最新設定    │
+│ GitHub Actions│ ─────────────────► │ 查 Google│ ◄─────────────┘
+└──────────────┘                     │  Flights │
+                                     └──────────┘
+</code></pre></div></section>
+<section class="slide"><div class="slide-inner"><h1>opencode 開發流程的特色</h1>
+<p>整個專案<strong>沒有打開過一次 code editor</strong>，全部透過對話與工具完成：</p>
+<table>
+<thead>
+<tr>
+<th>特色</th>
+<th>這次怎麼用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Plan 模式</strong></td>
+<td>每次大改前先給架構圖、檔案異動清單、驗證計畫，<strong>使用者確認才動手</strong></td>
+</tr>
+<tr>
+<td><strong>工具驅動</strong></td>
+<td>自動跑 <code>git</code>、<code>pip</code>、<code>python main.py</code>、<code>curl</code>、<code>websearch</code> 驗證</td>
+</tr>
+<tr>
+<td><strong>每步驗證</strong></td>
+<td>改完必跑測試／查價，log 為憑（<code>TWD 4500</code> 這種可見結果）</td>
+</tr>
+<tr>
+<td><strong>即時查證</strong></td>
+<td>「LINE Notify 還活著嗎？」「Push 計費？」→ 直接 websearch 官方文件</td>
+</tr>
+<tr>
+<td><strong>問題導向</strong></td>
+<td>302、幣別、API 限制…全部現場診斷、紀錄解法</td>
+</tr>
+</tbody>
+</table></div></section>
+<section class="slide"><div class="slide-inner"><h1>成本總結</h1>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>成本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GitHub Actions 排程</td>
+<td>免費</td>
+</tr>
+<tr>
+<td>GAS 接收器</td>
+<td>免費</td>
+</tr>
+<tr>
+<td>LINE 官方帳號（免費方案）</td>
+<td>NT$0</td>
+</tr>
+<tr>
+<td>LINE Push 通知</td>
+<td>約 60 則/月，免費 200 則內</td>
+</tr>
+<tr>
+<td>總計</td>
+<td><strong>NT$0</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>產出</strong>：一個每日自動查價、LINE 對話改設定、降價自動通知的系統，全在對話中完成。</p></div></section>
+<section class="slide"><div class="slide-inner"><h1>給想複製這個流程的人</h1>
+<p><strong>把對話當「同事」的 3 個原則</strong>：</p>
+<ol>
+<li><strong>先 Plan 再 Build</strong> — 讓 AI 先講清楚架構與代價，你確認再動手</li>
+<li><strong>要求「可驗證的結果」</strong> — 不要只看程式寫好，要看到 log／測試通過</li>
+<li><strong>善用它的工具能力</strong> — git、測試、網路查證都讓它做，你專注在<strong>決策</strong></li>
+</ol>
+<p><strong>踩坑心法</strong>：
+- 平台限制（API 終止、付費牆、redirect）→ <strong>先查官方文件再設計</strong>
+- 本機對、雲端錯 → <strong>八成是環境差異</strong>（IP／時區）
+- 驗證按鈕失敗 → 用<strong>真實操作</strong>做決定性測試</p></div></section>
+<section class="slide"><div class="slide-inner"><h1>Q&amp;A</h1>
+<p>完整程式碼與操作檢查表：<code>github.com/luckscylla/flight-price-tracker</code></p>
+<p><strong>用 opencode 說一句話，讓它陪你從需求走到上線。</strong></p></div></section>
+</div>
+<div class="nav">
+  <button class="controls" data-nav="prev">◀</button>
+  <span class="page"><span id="cur">1</span> / <span id="total">16</span></span>
+  <button class="controls" data-nav="next">▶</button>
+</div>
+<div class="hint">← → 換頁 ・ F11 全螢幕 ・ 列印可輸出 PDF</div>
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let cur = 0;
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, k) => s.classList.toggle('active', k === cur));
+    document.getElementById('cur').textContent = cur + 1;
+    document.querySelector('.slide.active')?.scrollTo(0, 0);
+  }
+  window.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(cur + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(cur - 1); }
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(slides.length - 1);
+  });
+  document.querySelectorAll('[data-nav]').forEach(b =>
+    b.addEventListener('click', () => show(cur + (b.dataset.nav === 'next' ? 1 : -1))));
+</script>
+</body>
+</html>
