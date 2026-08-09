@@ -192,6 +192,7 @@ python main.py
 ## 注意事項
 
 - `google-flights-search` 是非官方介面，Google 可能隨時變更格式；偶發查無結果屬正常。
+- 幣別已強制為 TWD（`curr` 參數）。`google-flights-search` 原本會依伺服器 IP 地區決定幣別（GitHub Actions 在美國會回美金），已在本專案注入 `curr` 修正，通知金額與頁面一致。
 - 目標價低於現價時不會發通知，但每次查詢仍會寫入 `data/history.csv`。
 - LINE 憑證與 GitHub PAT 屬機密，務必只放在 `.env` 與 GitHub Secrets，勿提交。
 - GAS 的 `?key=` 是 Webhook 的存取密鑰（GAS 無法讀取 header），請用不易猜測的字串。
