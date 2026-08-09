@@ -22,8 +22,18 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Download settings from Gist
+        # 讀取 LINE 對話設定的最新版（Gist 公開 raw URL）
+        # 沒有設定時略過，main.py 自動回退 config.yaml
+        run: |
+          if [ -n "$SETTINGS_URL" ]; then
+            curl -fsSL "$SETTINGS_URL" -o settings.json || echo "下載設定失敗，改用 config.yaml"
+          fi
+        env:
+          SETTINGS_URL: ${{ secrets.SETTINGS_GIST_RAW_URL }}
+
       - name: Run flight price check
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
         run: python main.py

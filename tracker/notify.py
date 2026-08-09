@@ -1,6 +1,6 @@
 # ============================================================
-# 通知：Telegram Bot
-# 當票價低於目標價時，透過 sendMessage API 推送訊息
+# 通知：LINE Messaging API
+# 當票價低於目標價時，透過 Push API 推送訊息（計入每月免費額度）
 # ============================================================
 
 import logging
@@ -11,32 +11,41 @@ from .config import resolve_secret
 
 logger = logging.getLogger(__name__)
 
-TELEGRAM_API = "https://api.telegram.org/bot{token}/sendMessage"
+LINE_PUSH_API = "https://api.line.me/v2/bot/message/push"
 
 
-def send_telegram(bot_token: str, chat_id: str, text: str) -> bool:
-    """發送 Telegram 訊息，成功回傳 True。"""
-    if not bot_token or not chat_id:
-        logger.warning("缺少 TELEGRAM_BOT_TOKEN 或 TELEGRAM_CHAT_ID，略過通知")
+def send_line(channel_access_token: str, user_id: str, text: str) -> bool:
+    """發送 LINE Push 訊息，成功回傳 True。
+
+    Push API 會計入每月訊息額度（免費方案 200 則/月）。
+    """
+    if not channel_access_token or not user_id:
+        logger.warning("缺少 LINE_CHANNEL_ACCESS_TOKEN 或 LINE_USER_ID，略過通知")
         return False
     try:
         resp = requests.post(
-            TELEGRAM_API.format(token=bot_token),
-            data={"chat_id": chat_id, "text": text},
+            LINE_PUSH_API,
+            headers={
+                "Authorization": f"Bearer {channel_access_token}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "to": user_id,
+                "messages": [{"type": "text", "text": text}],
+            },
             timeout=15,
         )
-        resp.raise_for_status()
-        ok = resp.json().get("ok", False)
-        if not ok:
-            logger.warning("Telegram 回傳失敗：%s", resp.text)
-        return ok
+        if resp.status_code != 200:
+            logger.warning("LINE 回傳失敗（%s）：%s", resp.status_code, resp.text)
+            return False
+        return True
     except requests.RequestException as exc:
-        logger.error("Telegram 通知失敗：%s", exc)
+        logger.error("LINE 通知失敗：%s", exc)
         return False
 
 
 def build_message(cfg: dict, cheapest: dict, price: float) -> str:
-    """組出通知訊息內容。"""
+    """組出通知訊息內容（LINE 純文字格式）。"""
     s = cfg["search"]
     airlines = "/".join(cheapest.get("airlines") or ["未知"])
     return (
@@ -54,6 +63,6 @@ def build_message(cfg: dict, cheapest: dict, price: float) -> str:
 
 def notify(cfg: dict, message: str) -> bool:
     """依設定發送通知，回傳是否成功。"""
-    bot_token = resolve_secret(cfg, "bot_token_env")
-    chat_id = resolve_secret(cfg, "chat_id_env")
-    return send_telegram(bot_token, chat_id, message)
+    channel_access_token = resolve_secret(cfg, "channel_access_token_env")
+    user_id = resolve_secret(cfg, "user_id_env")
+    return send_line(channel_access_token, user_id, message)

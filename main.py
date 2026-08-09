@@ -1,6 +1,6 @@
 # ============================================================
 # flight-price-tracker
-# 定時查詢機票價格，低於目標價時透過 Telegram 通知
+# 定時查詢機票價格，低於目標價時透過 LINE 通知
 # ============================================================
 
 import logging
@@ -16,6 +16,7 @@ from tracker.search import (
     parse_price,
     search_flights,
 )
+from tracker.settings import apply_settings_file
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,7 +27,7 @@ logger = logging.getLogger("flight-price-tracker")
 
 
 def run() -> int:
-    cfg = load_config()
+    cfg = apply_settings_file(load_config())
     s = cfg["search"]
     target = s.get("target_price", 0)
     logger.info(

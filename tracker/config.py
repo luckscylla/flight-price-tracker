@@ -26,8 +26,12 @@ def get_env_var(name: str) -> str:
 
 
 def resolve_secret(cfg: dict, key: str) -> str:
-    """依設定中指定的環境變數名稱取出機密值。"""
-    env_name = cfg["notification"]["telegram"].get(key)
+    """依設定中指定的環境變數名稱取出機密值。
+
+    讀取 notification.<provider> 區塊，故 provider 換成 line/telegram 皆可。
+    """
+    provider = cfg["notification"].get("provider", "line")
+    env_name = cfg["notification"].get(provider, {}).get(key)
     if not env_name:
         return ""
     return get_env_var(env_name)

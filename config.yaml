@@ -9,10 +9,10 @@ search:
   target_price: 15000  # 目標價（NT$），低於此價即發通知
 
 notification:
-  provider: telegram   # 目前僅支援 telegram
-  telegram:
-    bot_token_env: TELEGRAM_BOT_TOKEN   # Bot token 的環境變數名稱
-    chat_id_env: TELEGRAM_CHAT_ID       # 接收者的 chat id 環境變數名稱
+  provider: line      # 目前僅支援 line（LINE Messaging API）
+  line:
+    channel_access_token_env: LINE_CHANNEL_ACCESS_TOKEN  # Channel Access Token 的環境變數名稱
+    user_id_env: LINE_USER_ID                            # 接收者 user id 的環境變數名稱
 
 logging:
   history_file: data/history.csv   # 查詢歷史記錄
