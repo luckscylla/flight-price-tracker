@@ -2,11 +2,12 @@
 """把 PRESENTATION.md（Marp 格式）轉成可瀏覽的 HTML 簡報。
 
 使用方式：
-    python3 scripts/build_slides.py
-產生：
-    presentation.html（單一檔案，瀏覽器開啟即可，支援左右鍵換頁）
+    python3 scripts/build_slides.py                          # PRESENTATION.md → presentation.html
+    python3 scripts/build_slides.py IN.md                    # IN.md → IN.html
+    python3 scripts/build_slides.py IN.md OUT.html           # 指定輸出檔
 """
 import re
+import sys
 from pathlib import Path
 
 import markdown
@@ -149,8 +150,8 @@ def clean_slide(text: str) -> str:
     return "\n".join(out)
 
 
-def build() -> None:
-    raw = SRC.read_text(encoding="utf-8")
+def build(src: Path = SRC, out: Path = OUT) -> None:
+    raw = src.read_text(encoding="utf-8")
     slides = [clean_slide(s) for s in split_slides(raw)]
     rendered = []
     for idx, s in enumerate(slides, 1):
@@ -162,9 +163,14 @@ def build() -> None:
     html = HTML_TEMPLATE.replace("{slides}", "\n".join(rendered)).replace(
         "{total}", str(len(slides))
     )
-    OUT.write_text(html, encoding="utf-8")
-    print(f"已產生 {OUT}（{len(slides)} 頁）")
+    out.write_text(html, encoding="utf-8")
+    print(f"已產生 {out}（{len(slides)} 頁）")
 
 
 if __name__ == "__main__":
-    build()
+    if len(sys.argv) == 3:
+        build(Path(sys.argv[1]), Path(sys.argv[2]))
+    elif len(sys.argv) == 2:
+        build(Path(sys.argv[1]), Path(sys.argv[1]).with_suffix(".html"))
+    else:
+        build()
