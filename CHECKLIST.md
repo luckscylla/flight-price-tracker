@@ -36,7 +36,14 @@
   ```
 - [ ] 選 **Create public gist** → 按建立
 - [ ] 記錄 **Gist ID**（網址 `.../gist.github.com/<你>/<ID>` 中的 `<ID>`）
-- [ ] 按 **Raw** → 記錄 **Raw URL**（整串 `https://gist.githubusercontent.com/.../settings.json`）
+- [ ] 記錄 **Raw URL**，必須是下面這種「**不含 SHA**」的格式：
+      ```
+      https://gist.githubusercontent.com/<你>/<GIST_ID>/raw/settings.json
+      ```
+      > ⚠️ 這裡最常見的坑：Gist 網頁上的 **Raw** 按鈕若從「Revisions 歷史紀錄」進入，會給你
+      > `.../raw/<40碼SHA>/settings.json` — 這種網址**永久釘在那一版**，之後用 LINE 改了設定
+      > 也不會生效（症狀：Gist 網頁明明是新的，Actions 卻一直抓到舊日期）。
+      > 自照上面手寫的格式最保險，`<GIST_ID>` 直接填上一步記下的 ID。
 
 ## □ Step 3：建立 GitHub PAT（僅 gist 權限）
 - [ ] GitHub → 右上大頭貼 → **Settings** → 最下方 **Developer settings**

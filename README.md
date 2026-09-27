@@ -192,6 +192,11 @@ python main.py
 ## 注意事項
 
 - `google-flights-search` 是非官方介面，Google 可能隨時變更格式；偶發查無結果屬正常。
+- **Gist Raw 網址有兩種，只有其中一種會自動更新**：
+  - ✅ `https://gist.githubusercontent.com/<user>/<GIST_ID>/raw/settings.json` → 永遠抓最新版
+  - ❌ `https://gist.githubusercontent.com/<user>/<GIST_ID>/raw/<40碼SHA>/settings.json` → **永久釘在那一版**，LINE 改了設定也不會生效
+  - 症狀：Gist 網頁看起來是新的，Actions 卻一直用舊日期。workflow 會印出警告並自動改用最新版，但仍建議把 secret 設成第一種。
+- 機票日期過期時，程式會明確回報「出發日期已過期」並停止；請用 LINE 的 `/set` 更新。
 - 幣別已強制為 TWD（`curr` 參數）。`google-flights-search` 原本會依伺服器 IP 地區決定幣別（GitHub Actions 在美國會回美金），已在本專案注入 `curr` 修正，通知金額與頁面一致。
 - 目標價低於現價時不會發通知，但每次查詢仍會寫入 `data/history.csv`。
 - LINE 憑證與 GitHub PAT 屬機密，務必只放在 `.env` 與 GitHub Secrets，勿提交。

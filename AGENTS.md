@@ -67,6 +67,7 @@ python3 scripts/build_slides.py
 ## 部署與機密
 
 - GitHub Secrets：`LINE_CHANNEL_ACCESS_TOKEN`、`LINE_USER_ID`、`SETTINGS_GIST_RAW_URL`。
+- **`SETTINGS_GIST_RAW_URL` 必須是不含 revision SHA 的形式**：`https://gist.githubusercontent.com/<user>/<GIST_ID>/raw/settings.json`。帶 SHA 的網址會永久釘在舊版，造成「Gist 已更新但 Actions 抓舊資料」。workflow 會偵測並自動改用最新版，但 secret 本身仍應設定正確。
 - 機密只能放 `.env` 與 GitHub Secrets；`.env`、`data/`、`settings.json` 已在 `.gitignore`。
 - GAS 的 `?key=` 是 webhook 存取密鑰；改 GAS 程式碼後要重新部署新版本。
 - Actions cron 使用 UTC；repo 連續 60 天無活動時排程會停用。
