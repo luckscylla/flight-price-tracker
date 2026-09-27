@@ -61,4 +61,7 @@ def apply_settings_file(cfg: dict, path: str | Path = "settings.json") -> dict:
     if settings:
         logger.info("套用 LINE 設定覆蓋：%s", path)
         return merge_settings(cfg, settings)
+    logger.warning(
+        "未套用 %s（不存在或格式錯誤），改用 config.yaml 的預設值", path
+    )
     return cfg

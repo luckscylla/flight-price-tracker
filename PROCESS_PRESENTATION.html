@@ -63,9 +63,9 @@
 </head>
 <body>
 <div class="deck">
-<section class="slide active"><div class="slide-inner"><h1>用一句話讓 opencode 做完一個專案</h1>
+<section class="slide active"><div class="slide-inner"><h1>如何用 opencode 做完一個專案</h1>
 <h3>從需求到上線，只靠對話</h3>
-<p>我想分享的不是「做出什麼功能」，而是<strong>「我是怎麼問的」</strong></p></div></section>
+<p>我想分享的不是「做出什麼功能」，而是<strong>「怎麼問的」</strong></p></div></section>
 <section class="slide"><div class="slide-inner"><h1>這場對話的數字</h1>
 <table>
 <thead>
@@ -80,12 +80,12 @@
 <td>5 個</td>
 </tr>
 <tr>
-<td>我輸入的 prompt</td>
+<td>輸入的 prompt</td>
 <td><strong>59 次</strong></td>
 </tr>
 <tr>
 <td>開發時間</td>
-<td>2 天（8/8 – 8/9）</td>
+<td>2 天</td>
 </tr>
 <tr>
 <td>產出提交</td>
@@ -103,18 +103,18 @@
 </table></div></section>
 <section class="slide"><div class="slide-inner"><h1>開場的第一個 prompt</h1>
 <blockquote>
-<p>「我想開發一個<strong>定時查詢機票價格並發送通知</strong>的自動化腳本。請幫我設計並開發這個專案，要求如下：
-程式語言：使用 Python（或 Node.js）。
-機票查詢：透過爬蟲或 Skyscanner / Google Flights API / Amadeus API 查詢指定航線與日期的機票價格。
-通知機制：當價格低於設定的目標價（例如 NT$ 15,000）時，透過 Line Notify / Telegram Bot / Email 發送通知。
-定時執行：撰寫一個排程設定…讓它每天自動執行二次。
-<strong>請先在 Plan 模式 下規劃專案結構與步驟，列出需要的第三方套件，待我確認後再開始建立檔案與撰寫程式碼。</strong>」</p>
+<p>「我想開發一個<strong>定時查詢機票價格並發送通知</strong>的自動化腳本。請幫我設計並開發這個專案，要求如下：<br>
+1. 程式語言：使用 Python（或 Node.js）。<br>
+2. 機票查詢：透過爬蟲或 Skyscanner / Google Flights API / Amadeus API 查詢指定航線與日期的機票價格。<br>
+3. 通知機制：當價格低於設定的目標價（例如 NT$ 15,000）時，透過 Line Notify / Telegram Bot / Email 發送通知。<br>
+4. 定時執行：撰寫一個排程設定…讓它每天自動執行二次。<br>
+<strong>請先在 Plan 模式 下規劃專案結構與步驟，列出需要的第三方套件，待我確認後再開始建立檔案與撰寫程式碼。</strong>」<br></p>
 </blockquote></div></section>
 <section class="slide"><div class="slide-inner"><h1>這個 prompt 為什麼有效</h1>
 <table>
 <thead>
 <tr>
-<th>我給的</th>
+<th>內容</th>
 <th>效果</th>
 </tr>
 </thead>
@@ -147,7 +147,7 @@
 <section class="slide"><div class="slide-inner"><h1>關鍵在最後一句：先 Plan 再 Build</h1>
 <p><strong>Plan 模式回報了什麼：</strong></p>
 <ul>
-<li>選型比較（為什麼用 <code>google-flights-search</code> 而不是官方 API）</li>
+<li>選型比較（為什麼用 <code>google-flights-search</code> ）</li>
 <li>完整檔案結構（<code>main.py</code> + <code>tracker/</code> 模組化切分）</li>
 <li>第三方套件清單</li>
 <li>已知風險（爬蟲非官方介面、可能查無結果）</li>
@@ -171,7 +171,6 @@
 <blockquote>
 <p>「中間有出現一個 warning 有需要注意什麼嗎 Node.js 20 is deprecated.」</p>
 <p>「上面的 status 是 success，但中間的 check-price 還在一直轉圈圈，這樣是有成功嗎 ?」</p>
-<p>「data/history.csv 在哪裡 ?」</p>
 </blockquote>
 <p><strong>觀察重點：我不會直接說「壞了」，而是描述我看到的畫面</strong> — 轉圈圈、deprecated、檔案不見。
 AI 因此能精準定位，而不是猜錯方向。</p></div></section>
@@ -184,7 +183,7 @@ AI 因此能精準定位，而不是猜錯方向。</p></div></section>
 設定不用再改檔案，用聊天就能調。</p>
 <p><strong>接下來 AI 幫我釐清了所有權限制（這些是文件查不到的）：</strong></p>
 <blockquote>
-<p>「這樣還需要 VPS 嗎 ?」</p>
+<p>「這樣還需要 VPS (Virtual Private Server) 嗎 ?」</p>
 <p>「有辦法執行 Github Action 時，透由讀取 Telegram user 的資訊，例如簡介之類的，得到想查詢的機票訊息，然後再依此去做搜尋嗎 ?」</p>
 </blockquote></div></section>
 <section class="slide"><div class="slide-inner"><h1>關鍵轉折：先問價格，再決定要不要做</h1>
@@ -222,10 +221,10 @@ AI 回答免費額度後，我才確認轉向 — 這是人的判斷，不是 AI
 <section class="slide"><div class="slide-inner"><h1>最終架構</h1>
 <pre><code>LINE 使用者 ──訊息──&gt; LINE Messaging API ──webhook──&gt; GAS 接收器
    ▲                                                   │ 對話式設定 /set
-   │  Push API（約 60 則/月，免費額度內）              │ 寫入 GitHub Gist
+   │  Push API（約 200 則/月，免費額度內）               │ 寫入 GitHub Gist
    │                                                   ▼
    └──── GitHub Actions（每日 09:00/21:00）── curl 下載最新設定
-                                                     │
+                                                       │
                                           查 Google Flights → 低於目標價才通知
 </code></pre>
 <p><strong>設定存放於公開 Gist</strong>（不污染 repo），Actions 每次執行用 <code>curl</code> 拉最新版。</p></div></section>
@@ -289,7 +288,7 @@ AI 回答免費額度後，我才確認轉向 — 這是人的判斷，不是 AI
 <p>「3. 先「暖機」一次… 出現 找不到以下指令碼函式：doGet」</p>
 <p>「加了 doGet 後，用瀏覽器可以得到 OK Webhook URL」</p>
 <p>「按 Verify（驗證）還是出現 error (302 Found)」</p>
-<p>「步驟 1 的無痕測試 顯示 OK」 → 「測試 B 有回應」</p>
+<p>「步驟 1 的無痕測試 顯示 OK」</p>
 </blockquote>
 <p><strong>解法</strong>：GAS 的 <code>ContentService</code> 會 302 轉址，LINE 的 Verify 要求 200。<strong>實際投遞是成功的</strong>，這是已知限制。</p></div></section>
 <section class="slide"><div class="slide-inner"><h1>坑 2：TWD 237 卻是 7641（最典型的 bug）</h1>
@@ -318,8 +317,7 @@ if &quot;curr=&quot; not in base:
 <blockquote>
 <p>「有辦法看出 取得好友列表 為什麼不支援嗎 ? 如果將來想將這個功能分享給其他人，是不是可以透過取得好友列表得到要通知的名單 ?」</p>
 </blockquote>
-<p><strong>結論</strong>：這是<strong>平台的硬限制</strong>，不是設定錯誤 — 免費方案拿不到好友名單。
-→ 改用 webhook 事件中夾帶的 userId 當通知名單。</p>
+<p><strong>結論</strong>：這是<strong>平台的硬限制</strong>，不是設定錯誤 — 免費方案拿不到好友名單。</p>
 <p><strong>Lesson：問「為什麼」比問「怎麼辦」更有價值</strong>，因為它決定了是改程式還是改期待。</p></div></section>
 <section class="slide"><div class="slide-inner"><h1>59 次 prompt 的 4 種型態</h1>
 <table>
@@ -385,10 +383,7 @@ if &quot;curr=&quot; not in base:
 <li>申請帳號（LINE 官方帳號、GAS、GitHub PAT）</li>
 <li>實際部署與設定 Secret</li>
 <li><strong>驗收</strong>：「顯示幣別正常了」</li>
-</ul>
-<blockquote>
-<p>開玩笑地說：整個過程我沒有寫過一行 code，但每一個技術決策都是<strong>我做的</strong>。</p>
-</blockquote></div></section>
+</ul></div></section>
 <section class="slide"><div class="slide-inner"><h1>交付與交接：讓下一次的自己接得上</h1>
 <p><strong>開發結束時，我還多問了三個問題：</strong></p>
 <blockquote>
@@ -433,14 +428,10 @@ if &quot;curr=&quot; not in base:
 <blockquote>
 <p>從一句需求到線上服務，<strong>2 天、59 次 prompt、0 行程式碼、NT$0</strong></p>
 </blockquote></div></section>
-<section class="slide"><div class="slide-inner"><h1>Q&amp;A</h1>
-<p><strong>專案原始碼</strong>：<code>github.com/luckscylla/flight-price-tracker</code>（含 README、CHECKLIST、簡報）</p>
-<p><strong>想試試看？</strong> 你需要：LINE 官方帳號、Google 帳號、GitHub 帳號，約 30 分鐘設定。</p>
-<p><strong>歡迎提問</strong> — 例如：怎麼避免踩坑？怎麼拆 session？怎麼匯出對話？</p></div></section>
 </div>
 <div class="nav">
   <button class="controls" data-nav="prev">◀</button>
-  <span class="page"><span id="cur">1</span> / <span id="total">20</span></span>
+  <span class="page"><span id="cur">1</span> / <span id="total">19</span></span>
   <button class="controls" data-nav="next">▶</button>
 </div>
 <div class="hint">← → 換頁 ・ F11 全螢幕 ・ 列印可輸出 PDF</div>

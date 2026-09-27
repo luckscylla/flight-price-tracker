@@ -26,8 +26,21 @@ jobs:
         # 讀取 LINE 對話設定的最新版（Gist 公開 raw URL）
         # 沒有設定時略過，main.py 自動回退 config.yaml
         run: |
-          if [ -n "$SETTINGS_URL" ]; then
-            curl -fsSL "$SETTINGS_URL" -o settings.json || echo "下載設定失敗，改用 config.yaml"
+          if [ -z "$SETTINGS_URL" ]; then
+            echo "⚠️ 未設定 SETTINGS_GIST_RAW_URL，本次將改用 config.yaml 的預設值"
+            exit 0
+          fi
+          if echo "$SETTINGS_URL" | grep -qE '/raw/[0-9a-f]{7,40}/'; then
+            echo "⚠️ 網址含 revision SHA —— 可能已釘在舊版本，Gist 更新後不會生效"
+          else
+            echo "✅ 網址為 Gist 最新版本格式（不含 SHA）"
+          fi
+          if curl -fsSL "$SETTINGS_URL" -o settings.json; then
+            echo "✅ 下載成功，本次實際使用的 LINE 設定如下："
+            cat settings.json
+          else
+            echo "❌ 下載失敗（404 表示網址／檔名／公開權限有問題），改用 config.yaml"
+            rm -f settings.json
           fi
         env:
           SETTINGS_URL: ${{ secrets.SETTINGS_GIST_RAW_URL }}
