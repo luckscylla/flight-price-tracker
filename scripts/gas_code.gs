@@ -36,9 +36,13 @@ var STEPS = {
   DATE: 'date',
   ROUND: 'round',
   RETURN: 'return',
+  WINDOW_DAYS: 'window_days',
+  WINDOW_TARGET: 'window_target',
   TARGET: 'target',
   CONFIRM: 'confirm',
 };
+
+var MAX_WINDOW_DAYS = 7;   // 最多可彈性幾天（2N+1 組，避免查詢過久）
 
 var HELP_TEXT = [
   '✈️ 機票追蹤 Bot 指令：',
@@ -174,7 +178,7 @@ function advance(state, text) {
     case STEPS.ROUND:
       if (/^單程$/i.test(text) || /^one-way$/i.test(text)) {
         data.return_date = '';
-        return { step: STEPS.TARGET, data: data, ask: '請輸入目標價（NT$，低於此價即通知）：' };
+        return { step: STEPS.WINDOW_DAYS, data: data, ask: askWindowDays() };
       }
       if (/^來回$/i.test(text) || /^round$/i.test(text)) {
         return { step: STEPS.RETURN, data: data, ask: '請輸入回程日期（格式 YYYY-MM-DD）：' };
@@ -184,6 +188,33 @@ function advance(state, text) {
     case STEPS.RETURN:
       if (!isDate(text)) return { error: '日期格式需為 YYYY-MM-DD，請重新輸入：' };
       data.return_date = text;
+      return { step: STEPS.WINDOW_DAYS, data: data, ask: askWindowDays() };
+
+    case STEPS.WINDOW_DAYS:
+      var days = parseWindowDays(text);
+      if (days === null) return { error: errWindowDays() };
+      data.date_window = days;
+      if (days === 0) {
+        data.date_window_target = 'departure';
+        return { step: STEPS.TARGET, data: data, ask: '請輸入目標價（NT$，低於此價即通知）：' };
+      }
+      return {
+        step: STEPS.WINDOW_TARGET,
+        data: data,
+        ask: '要讓哪個日期前後彈性 ' + days + ' 天？\n'
+          + '（去程輸入 d、回程輸入 r；單程只有去程可選）',
+      };
+
+    case STEPS.WINDOW_TARGET:
+      var letter = String(text).trim().toLowerCase();
+      if (letter === 'd' || /^去程$/.test(letter)) {
+        data.date_window_target = 'departure';
+      } else if (letter === 'r' || /^回程$/.test(letter)) {
+        if (!data.return_date) return { error: '這是單程，沒有回程日期，請輸入 d（去程）：' };
+        data.date_window_target = 'return';
+      } else {
+        return { error: '請輸入 d（去程）或 r（回程）：' };
+      }
       return { step: STEPS.TARGET, data: data, ask: '請輸入目標價（NT$，低於此價即通知）：' };
 
     case STEPS.TARGET:
@@ -206,16 +237,25 @@ function buildSearch(data) {
     departure_date: data.departure_date,
     return_date: data.return_date || '',
     target_price: data.target_price,
+    date_window: data.date_window || 0,
+    date_window_target: data.date_window_target || 'departure',
   };
 }
 
 function formatSettings(settings) {
   var s = settings.search;
+  var days = s.date_window || 0;
+  var windowText = '（不彈性）';
+  if (days > 0) {
+    var which = s.date_window_target === 'return' && s.return_date ? '回程' : '出發';
+    windowText = '（' + which + '前後 ' + days + ' 天，共查 ' + (days * 2 + 1) + ' 組）';
+  }
   return (
     '起點：' + s.origin +
     '\n終點：' + s.destination +
     '\n出發：' + s.departure_date +
     '\n回程：' + (s.return_date || '（單程）') +
+    '\n日期彈性：' + windowText +
     '\n目標價：NT$ ' + s.target_price.toLocaleString()
   );
 }
@@ -325,4 +365,24 @@ function isDate(text) {
 function parsePrice(text) {
   var n = Number(String(text).replace(/[,\s]/g, ''));
   return isFinite(n) && n > 0 ? n : null;
+}
+
+function parseWindowDays(text) {
+  var t = String(text).trim();
+  if (/^不彈性$|^固定$|^0$/.test(t)) return 0;
+  var n = Number(t);
+  if (!isFinite(n) || n < 0) return null;
+  n = Math.floor(n);
+  if (n > MAX_WINDOW_DAYS) return null;
+  return n;
+}
+
+function askWindowDays() {
+  return '日期可以有幾天的彈性？\n'
+    + '（輸入 0～' + MAX_WINDOW_DAYS + ' 的整數，0 = 只查指定日期）\n'
+    + '例如「3」代表該日期前後 3 天都會查，共 7 組。';
+}
+
+function errWindowDays() {
+  return '請輸入 0～' + MAX_WINDOW_DAYS + ' 的整數（0 = 不彈性）：';
 }

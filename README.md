@@ -25,7 +25,7 @@ LINE 使用者 ──訊息──> LINE Messaging API ──webhook──> GAS �
 ### 需求演進
 1. 原始需求：定時查詢機票價格並發送通知。
 2. 第一版：固定 `config.yaml` 設定、Telegram 通知、GitHub Actions 排程。
-3. 演進版（現況）：改用 **LINE**，可透過 LINE 對話（`/set`）即時修改起點／終點／日期／單程來回／目標價，設定存於 Gist，排程每次讀取最新設定後再查價。
+3. 演進版（現況）：改用 **LINE**，可透過 LINE 對話（`/set`）即時修改起點／終點／日期／單程來回／日期彈性／目標價，設定存於 Gist，排程每次讀取最新設定後再查價。
 
 ### 決策紀錄
 
@@ -96,16 +96,19 @@ flight-price-tracker/
 
 1. 建立一個 **公開 Gist**，內含一個檔名為 `settings.json` 的檔案，內容範例：
    ```json
-   {
-     "search": {
-       "origin": "TPE",
-       "destination": "NRT",
-       "departure_date": "2026-10-01",
-       "return_date": "",
-       "target_price": 15000
-     }
-   }
-   ```
+    {
+      "search": {
+        "origin": "TPE",
+        "destination": "NRT",
+        "departure_date": "2026-10-01",
+        "return_date": "",
+        "target_price": 15000,
+        "date_window": 0,
+        "date_window_target": "departure"
+      }
+    }
+    ```
+    - `date_window`：日期可前後彈性幾天（`0` = 只查指定日期）；去程與回程之中只有一個可設範圍，由 `date_window_target`（`departure` 或 `return`）決定，每次查詢 `2 × date_window + 1` 組後取最低價。
 2. 複製 Gist 的 **Raw 網址**（`https://gist.githubusercontent.com/<user>/<id>/raw/<file>`）與 **Gist ID**。
 
 ### 3. GitHub PAT
@@ -147,7 +150,7 @@ python main.py
 
 | 指令 | 說明 |
 |------|------|
-| `/set` | 開始對話式設定：起點 → 終點 → 出發日期 → 單程/來回 →（回程）→ 目標價 → 確認 |
+| `/set` | 開始對話式設定：起點 → 終點 → 出發日期 → 單程/來回 →（回程）→ 彈性天數 →（去程/回程）→ 目標價 → 確認 |
 | `/config` | 顯示目前有效設定 |
 | `/cancel` | 取消進行中的設定 |
 | `/help` | 顯示指令說明 |
@@ -196,7 +199,7 @@ python main.py
   - ✅ `https://gist.githubusercontent.com/<user>/<GIST_ID>/raw/settings.json` → 永遠抓最新版
   - ❌ `https://gist.githubusercontent.com/<user>/<GIST_ID>/raw/<40碼SHA>/settings.json` → **永久釘在那一版**，LINE 改了設定也不會生效
   - 症狀：Gist 網頁看起來是新的，Actions 卻一直用舊日期。workflow 會印出警告並自動改用最新版，但仍建議把 secret 設成第一種。
-- 機票日期過期時，程式會明確回報「出發日期已過期」並停止；請用 LINE 的 `/set` 更新。
+- 機票日期過期時（彈性範圍內已無未來日期），程式會明確回報並停止；請用 LINE 的 `/set` 更新。
 - 幣別已強制為 TWD（`curr` 參數）。`google-flights-search` 原本會依伺服器 IP 地區決定幣別（GitHub Actions 在美國會回美金），已在本專案注入 `curr` 修正，通知金額與頁面一致。
 - 目標價低於現價時不會發通知，但每次查詢仍會寫入 `data/history.csv`。
 - LINE 憑證與 GitHub PAT 屬機密，務必只放在 `.env` 與 GitHub Secrets，勿提交。

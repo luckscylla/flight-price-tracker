@@ -3,9 +3,13 @@
 # 回傳 gf_search.search() 的結果，並提供價格解析與最低價挑選
 # ============================================================
 
+import datetime
+import logging
 import re
 
 from .config import BASE_DIR
+
+logger = logging.getLogger(__name__)
 
 try:
     from gf_search import search as _gf_search
@@ -64,6 +68,98 @@ def search_flights(cfg: dict) -> list[dict]:
 
 
 _PRICE_RE = re.compile(r"([\d,]+)")
+
+WINDOW_TARGETS = ("departure", "return")
+
+
+def _parse_date(value) -> datetime.date | None:
+    """把字串轉成 date，格式不對回傳 None。"""
+    if not value:
+        return None
+    try:
+        return datetime.date.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
+def _shift(day: datetime.date, offset: int) -> str:
+    return (day + datetime.timedelta(days=offset)).isoformat()
+
+
+def date_combos(cfg: dict) -> list[dict[str, str | None]]:
+    """產生本次要查詢的日期組合。
+
+    規格：去程與回程之中**只有一個**可設前後範圍（date_window_target），
+    另一個固定，因此組合數 = 2 * date_window + 1；date_window = 0 時
+    等同原本的單一組合，行為完全不變。
+
+    會自動略過：回程早於出發、以及已經是過去日期的組合。
+    """
+    s = cfg["search"]
+    window = max(0, int(s.get("date_window") or 0))
+    target = (s.get("date_window_target") or "departure").strip().lower()
+    if target not in WINDOW_TARGETS:
+        logger.warning(
+            "date_window_target=%s 不合法（應為 departure 或 return），改用 departure", target
+        )
+        target = "departure"
+
+    dep_center = _parse_date(s.get("departure_date"))
+    if dep_center is None:
+        raise SearchError(
+            f"出發日期格式不正確：{s.get('departure_date')!r}（需 YYYY-MM-DD）"
+        )
+    ret_center = _parse_date(s.get("return_date"))
+
+    if window == 0:
+        combos = [{"departure_date": dep_center.isoformat(),
+                   "return_date": ret_center.isoformat() if ret_center else None}]
+    elif target == "return" and ret_center is not None:
+        combos = [
+            {"departure_date": dep_center.isoformat(), "return_date": _shift(ret_center, off)}
+            for off in range(-window, window + 1)
+        ]
+    else:
+        if target == "return":
+            logger.warning("date_window_target=return 但未設定回程日期，改以去程套用範圍")
+        combos = [
+            {"departure_date": _shift(dep_center, off),
+             "return_date": ret_center.isoformat() if ret_center else None}
+            for off in range(-window, window + 1)
+        ]
+
+    today = datetime.date.today()
+    usable = []
+    for c in combos:
+        dep = _parse_date(c["departure_date"])
+        ret = _parse_date(c["return_date"]) if c["return_date"] else None
+        if dep < today or (ret is not None and ret < today):
+            logger.info("略過已過期的組合：%s → %s", c["departure_date"], c["return_date"] or "—")
+            continue
+        if ret is not None and ret < dep:
+            logger.info(
+                "略過回程早於出發的組合：%s → %s", c["departure_date"], c["return_date"]
+            )
+            continue
+        usable.append(c)
+
+    cap = int(s.get("max_date_combos") or 15)
+    if len(usable) > cap:
+        step = len(usable) / cap
+        sampled = [usable[int(i * step)] for i in range(cap)]
+        logger.warning(
+            "可查日期組合 %d 組，超過上限 %d 組， evenly 取樣 %d 組",
+            len(usable), cap, len(sampled),
+        )
+        usable = sampled
+
+    logger.info(
+        "日期組合：%s %s ±%d 天，共 %d 組",
+        s.get("departure_date"),
+        "回程" if (target == "return" and ret_center) else "出發",
+        window, len(usable),
+    )
+    return usable
 
 
 def parse_price(price_str: str) -> float | None:

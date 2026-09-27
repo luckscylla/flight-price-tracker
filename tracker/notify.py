@@ -44,16 +44,25 @@ def send_line(channel_access_token: str, user_id: str, text: str) -> bool:
         return False
 
 
-def build_message(cfg: dict, cheapest: dict, price: float) -> str:
-    """組出通知訊息內容（LINE 純文字格式）。"""
+def build_message(cfg: dict, cheapest: dict, price: float, searched: int = 1) -> str:
+    """組出通知訊息內容（LINE 純文字格式）。
+
+    cfg 帶入的是「命中最低價那一組」的設定，因此日期即為實際可訂日期。
+    """
     s = cfg["search"]
     airlines = "/".join(cheapest.get("airlines") or ["未知"])
+    window = int(s.get("date_window") or 0)
+    range_note = ""
+    if window > 0 and searched > 1:
+        which = "回程" if s.get("date_window_target") == "return" and s.get("return_date") else "出發"
+        range_note = f"（{which}前後 {window} 天內、共查 {searched} 組的最低價）"
     return (
         "✈️ 機票降價通知！\n"
         f"航線：{s['origin']} → {s['destination']}\n"
         f"日期：{s['departure_date']}"
         + (f" 回程 {s['return_date']}" if s.get("return_date") else "（單程）")
-        + f"\n航空公司：{airlines}"
+        + f"{range_note}\n"
+        + f"航空公司：{airlines}"
         + f"\n轉機：{cheapest.get('stops', '?')} 次"
         + f"\n\n價格：{cheapest.get('price', price)}"
         + f"\n目標價：NT$ {s['target_price']:,}"

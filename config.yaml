@@ -8,6 +8,13 @@ search:
   max_results: 5       # 取前幾筆結果計算最低價
   target_price: 15000  # 目標價（NT$），低於此價即發通知
 
+  # ---- 日期彈性 ----
+  # 去程與回程之中「只有一個」可設前後範圍，另一個固定，
+  # 因此每次執行的查詢次數 = 2 * date_window + 1
+  date_window: 0           # 可接受前後幾天；0 = 只查指定日期（預設，維持原本行為）
+  date_window_target: departure   # 範圍套用在哪個日期：departure 或 return
+  max_date_combos: 15      # 單次最多查幾組日期，超過則均勻取樣（避免查太多次被限流）
+
 notification:
   provider: line      # 目前僅支援 line（LINE Messaging API）
   line:

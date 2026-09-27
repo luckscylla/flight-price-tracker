@@ -19,6 +19,9 @@ SEARCH_FIELDS = [
     "currency",
     "max_results",
     "target_price",
+    "date_window",
+    "date_window_target",
+    "max_date_combos",
 ]
 
 
