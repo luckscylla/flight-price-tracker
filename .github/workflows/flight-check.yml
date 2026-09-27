@@ -30,8 +30,13 @@ jobs:
             echo "⚠️ 未設定 SETTINGS_GIST_RAW_URL，本次將改用 config.yaml 的預設值"
             exit 0
           fi
-          if echo "$SETTINGS_URL" | grep -qE '/raw/[0-9a-f]{7,40}/'; then
-            echo "⚠️ 網址含 revision SHA —— 可能已釘在舊版本，Gist 更新後不會生效"
+          # 自動去除釘住的 revision，改抓 Gist 最新版本
+          CLEAN_URL=$(echo "$SETTINGS_URL" | sed -E 's#/raw/[0-9a-f]{7,40}/#/raw/#; s#/raw/[0-9a-f]{7,40}$#/raw/settings.json#')
+          if [ "$CLEAN_URL" != "$SETTINGS_URL" ]; then
+            echo "⚠️ 網址含 revision SHA（Gist 更新後不會生效），已自動改用最新版："
+            echo "    $CLEAN_URL"
+            echo "    建議把 Actions secret SETTINGS_GIST_RAW_URL 改成上面這行"
+            SETTINGS_URL="$CLEAN_URL"
           else
             echo "✅ 網址為 Gist 最新版本格式（不含 SHA）"
           fi
